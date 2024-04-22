@@ -39,34 +39,34 @@ RUN if [ -f /mini10_work/lambda/mini10/bootstrap ]; then echo "File exists"; els
 ENTRYPOINT ["/mini10_work/lambda/mini10/bootstrap"]
 ```
 
-7. Deploy container to AWS Lambda:
+## Deploy container to AWS Lambda:
 
-7.1 Create a new private repository of Elastic Containter Registry (ECR)
+7 Create a new private repository of Elastic Containter Registry (ECR)
 
-7.2 authenticate Docker to AWS ECR: ```aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com```
+8 authenticate Docker to AWS ECR: ```aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com```
 
-7.3 Build the Docker image: ```docker buildx build --progress=plain --platform linux/arm64 -t mini10 .```
+9 Build the Docker image: ```docker buildx build --progress=plain --platform linux/arm64 -t mini10 .```
 
-7.4 Tag the image: ```docker tag mini10:latest YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com/mini10:latest```
+10 Tag the image: ```docker tag mini10:latest YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com/mini10:latest```
 
-7.5 Push Docker image to ECR ```docker push YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com/mini10:latest```
+11 Push Docker image to ECR ```docker push YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com/mini10:latest```
 
 
 after pushing the docker image to ECR, we could see the image listed in the mini10 ECR
 ![result](./images/ECR.png)
 
-8. Deploy the model to AWS Lambda:
+## Deploy the model to AWS Lambda:
 
-8.1 Create a new Lambda function: choose option Container Image, and browse to pick the url for the docker image we just pushed to the ECR
+12 Create a new Lambda function: choose option Container Image, and browse to pick the url for the docker image we just pushed to the ECR
 
-8.2 Choose arm64 for this project, then create the function.
+13 Choose arm64 for this project, then create the function.
 
-8.3 Click Create function URL to generate a new URL endpoint for the Lambda function.
+14 Click Create function URL to generate a new URL endpoint for the Lambda function.
 
-8.4 Set general Configuration as below:
+15 Set general Configuration as below:
 ![result](./images/lambda.png)
 
-8.5 we could then test the functionality through the URL endpoint.
+16 we could then test the functionality through the URL endpoint.
 
 
 
