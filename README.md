@@ -1,93 +1,65 @@
-# New Mini Project10
+# Rust Serverless Transformer Endpoint
 
+This project creates, dockernizes, and deploys a large language model (LLM) from Hugging Face using AWS Lambda. 
 
+- Dockerize Hugging Face Rust transformer
+- Deploy container to AWS Lambda
+- Implement query endpoint
 
-## Getting started
+## LLM Model:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+1. create a new cargo lambda project by doing ```cargo lambda new project_name```
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+2. Download the bloom-560m-q5_1-ggjt.bin file from https://huggingface.co/rustformers/bloomz-ggml/blob/main/bloomz-560m-q5_1-ggjt.bin, and put it under the src directory before running the project.
 
-## Add your files
+3. in main.rs, use the model to generate response.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## Local Test
 
+4. test the functionality of the project by running ```cargo lambda watch```
+
+5. open a new terminal, use curl to test the functionality:
+
+![result](./images/curl.png)
+
+## Dockerize Hugging Face Rust transformer
+
+6. write docker file 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/zx122/new-mini-project10.git
-git branch -M main
-git push -uf origin main
+FROM ghcr.io/cargo-lambda/cargo-lambda:latest as builder
+WORKDIR /usr/src/app
+COPY . .
+RUN cargo lambda build --release --arm64
+FROM public.ecr.aws/lambda/provided:al2-arm64
+WORKDIR /mini10_work
+COPY --from=builder /usr/src/app/target/ ./ 
+COPY --from=builder /usr/src/app/src/pythia-70m-q4_0-ggjt.bin ./ 
+RUN if [ -d /mini10_work/lambda/mini10/ ]; then echo "Directory exists"; else echo "Directory does not exist"; fi
+RUN if [ -f /mini10_work/lambda/mini10/bootstrap ]; then echo "File exists"; else echo "File does not exist"; fi
+ENTRYPOINT ["/mini10_work/lambda/mini10/bootstrap"]
 ```
 
-## Integrate with your tools
+7. Deploy container to AWS Lambda:
 
-- [ ] [Set up project integrations](https://gitlab.com/zx122/new-mini-project10/-/settings/integrations)
+7.1 Create a new private repository of Elastic Containter Registry (ECR)
+7.2 authenticate Docker to AWS ECR: ```aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com```
+7.3 Build the Docker image: ```docker buildx build --progress=plain --platform linux/arm64 -t mini10 .```
+7.4 Tag the image: ```docker tag mini10:latest YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com/mini10:latest```
+7.5 Push Docker image to ECR ```docker push YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.us-east-1.amazonaws.com/mini10:latest```
 
-## Collaborate with your team
+after pushing the docker image to ECR, we could see the image listed in the mini10 ECR
+![result](./images/ECR.png)
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+8. Deploy the model to AWS Lambda:
 
-## Test and Deploy
+8.1 Create a new Lambda function: choose option Container Image, and browse to pick the url for the docker image we just pushed to the ECR
+8.2 Choose arm64 for this project, then create the function.
+8.3 Click Create function URL to generate a new URL endpoint for the Lambda function.
+8.4 Set general Configuration as below:
+![result](./images/lambda.png)
+8.5 we could then test the functionality through the URL endpoint.
 
-Use the built-in continuous integration in GitLab.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
 
-***
 
-# Editing this README
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
